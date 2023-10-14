@@ -1,26 +1,54 @@
 import { createRouter, createWebHistory } from "vue-router";
-import HomeView from "../views/HomeView.vue";
+import AuthView from "../views/AuthView.vue";
+import store from "@/store";
 
 const routes = [
   {
     path: "/",
-    name: "home",
-    component: HomeView,
+    name: "auth",
+    component: AuthView,
   },
   {
-    path: "/about",
-    name: "about",
-    // route level code-splitting
-    // this generates a separate chunk (about.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
+    path: "/board",
+    name: "board",
     component: () =>
-      import(/* webpackChunkName: "about" */ "../views/AboutView.vue"),
+      import(/* webpackChunkName: "board" */ "../views/BoardView.vue"),
+    meta: {
+      requiresAuth: true,
+    },
+    children: [
+      {
+        path: "card/:id",
+        name: "card",
+        component: () =>
+          import(/* webpackChunkName: "card" */ "../views/CardView.vue"),
+      },
+    ],
+  },
+  {
+    path: "/:pathMatch(.*)*",
+    name: "notfound",
+    component: () =>
+      import(/* webpackChunkName: "notfound" */ "../views/NotFoundView.vue"),
   },
 ];
 
 const router = createRouter({
   history: createWebHistory(process.env.BASE_URL),
   routes,
+});
+
+router.beforeEach(async (to, from, next) => {
+  const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
+  const user = await store.dispatch("userModule/getUser");
+
+  if (requiresAuth && !user) {
+    next("/");
+  } else if (to.name === "auth" && user) {
+    next("/board");
+  } else {
+    next();
+  }
 });
 
 export default router;
